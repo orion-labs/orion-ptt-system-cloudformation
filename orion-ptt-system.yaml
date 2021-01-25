@@ -1,0 +1,231 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Cloudformation script to create the orion-ptt-system in AWS'
+
+#Conditions:
+#  AutodetectAmiId: !Equals [ !Ref InstanceAmiId, "autodetect" ]
+
+Parameters:
+  VpcID:
+    Description: ID of the VPC where the EC2 instances are to be launched.
+    Type: AWS::EC2::VPC::Id
+
+  PublicSubnet:
+    Description: A public subnet where EC2 instances can be reached by the Internet.
+    Type: AWS::EC2::Subnet::Id
+
+  KeyName:
+    Description: The EC2 Key Pair which will be used with all the EC2 instances launched as part of this cloudformation script.
+    Type: AWS::EC2::KeyPair::KeyName
+
+  InstanceAmiId:
+    Description: AMI ID for your EC2 Instances.  Ubuntu Server 18.04 LTS is recommended.  If you don't enter an AMI ID, we'll created a Lambda to find the latest Ubuntu 18.04 image and use that for your stack.
+    Type: AWS::EC2::Image::Id
+#    Type: String
+#    Default: "autodetect"
+
+  InstanceType:
+    Description: EC2 Instance type to launch.
+    Default: m5.2xlarge
+    Type: String
+
+  VolumeSize:
+    Description: Root Volume Size (in Gigabytes) for EC2 instances.
+    Default: 50
+    Type: String
+
+  KubernetesNodeName:
+    Description: Name for kubernetes node
+    Default: orion-ptt-system
+    Type: String
+
+Resources:
+#  DescribeImagesRole:
+#    Type: AWS::IAM::Role
+#    Properties:
+#      AssumeRolePolicyDocument:
+#        Version: '2012-10-17'
+#        Statement:
+#          - Action: sts:AssumeRole
+#            Effect: Allow
+#            Principal:
+#              Service: lambda.amazonaws.com
+#      ManagedPolicyArns:
+#        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+#      Policies:
+#        - PolicyName: DescribeImages
+#          PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#              - Action: ec2:DescribeImages
+#                Effect: Allow
+#                Resource: "*"
+#
+#  GetLatestAMI:
+#    Type: AWS::Lambda::Function
+#    Condition: AutodetectAmiId
+#    Properties:
+#      Runtime: python3.6
+#      Handler: index.handler
+#      Role: !Sub ${DescribeImagesRole.Arn}
+#      Timeout: 60
+#      Code:
+#        ZipFile: |
+#          import boto3
+#          import cfnresponse
+#          import json
+#          import traceback
+#
+#          def handler(event, context):
+#            try:
+#              response = boto3.client('ec2').describe_images(
+#                  Owners=[event['ResourceProperties']['Owner']],
+#                  Filters=[
+#                    {'Name': 'name', 'Values': [event['ResourceProperties']['Name']]},
+#                    {'Name': 'architecture', 'Values': [event['ResourceProperties']['Architecture']]},
+#                    {'Name': 'root-device-type', 'Values': ['ebs']},
+#                  ],
+#              )
+#
+#              amis = sorted(response['Images'],
+#                            key=lambda x: x['CreationDate'],
+#                            reverse=True)
+#              id = amis[0]['ImageId']
+#
+#              cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, id)
+#            except:
+#              traceback.print_last()
+#              cfnresponse.send(event, context, cfnresponse.FAIL, {}, "ok")
+##              cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, "No ami found")
+#
+#  InstanceAmi:
+#    Type: Custom::FindAMI
+#    Condition: AutodetectAmiId
+#    DependsOn: GetLatestAMI
+#    Properties:
+#      ServiceToken: !Sub ${GetLatestAMI.Arn}
+#      Owner: "099720109477"
+##      Name: ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*
+#      Name: ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-*
+#      Architecture: x86_64
+
+  KubernetesInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref InstanceAmiId
+#      ImageId: !If [ AutodetectAmiId, !Ref InstanceAmi, !Ref InstanceAmiId ]
+      KeyName: !Ref KeyName
+
+      IamInstanceProfile: !Ref KubernetesNodeInstanceProfile
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash
+            curl https://kurl.sh/orion-ptt-system | sudo bash
+
+      BlockDeviceMappings:
+        - DeviceName: "/dev/sda1"
+          Ebs:
+            VolumeSize: !Ref VolumeSize
+            VolumeType: gp2
+
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "True"
+          DeleteOnTermination: "True"
+          SubnetId: !Ref PublicSubnet
+          DeviceIndex: 0
+          GroupSet:
+            - Ref: InstanceSecurityGroup
+
+      Tags:
+        - Key: OrionRole
+          Value: Kubernetes Node
+
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-${KubernetesNodeName}
+
+  KubernetesNodeRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-kubernetes-node
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+
+  KubernetesNodePolicies:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-KubernetesNodePolicy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "elasticloadbalancing:DescribeLoadBalancers"
+            Resource: "*"
+      Roles:
+        - Ref: "KubernetesNodeRole"
+
+  KubernetesNodeInstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      InstanceProfileName: !Sub ${AWS::StackName}-KubernetesNodeInstanceProfile
+      Roles:
+        - Ref: "KubernetesNodeRole"
+
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for orion-ptt-system
+      GroupName: !Sub ${AWS::StackName}-orion-default-security-group
+      VpcId: !Ref VpcID
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: tcp
+          FromPort: 8800
+          ToPort: 8800
+          CidrIp: 0.0.0.0/0
+
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 0
+          CidrIp: 0.0.0.0/0
+
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Orion PTT System Default Security Group
+
+Outputs:
+  K8sNodeInternalIpAddress:
+    Description: Internal IP Address of Kubernetes Instance
+    Value: !GetAtt KubernetesInstance.PrivateIp
+    Export:
+      Name: !Sub ${AWS::StackName}-K8sNodePrivateIpAddress
+
+  K8sNodeExternalIpAddress:
+    Description: External IP Address of Kubernetes Instance
+    Value: !GetAtt KubernetesInstance.PublicIp
+    Export:
+      Name: !Sub ${AWS::StackName}-K8sNodePublicIpAddress
