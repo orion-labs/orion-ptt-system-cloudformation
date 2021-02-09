@@ -2,7 +2,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Cloudformation script to create the orion-ptt-system in AWS'
 
-#Conditions:
+Conditions:
+  ConfigureRoute53: !Equals [!Ref DNS, "true"]
 #  AutodetectAmiId: !Equals [ !Ref InstanceAmiId, "autodetect" ]
 
 Parameters:
@@ -38,6 +39,24 @@ Parameters:
     Description: Name for kubernetes node
     Default: orion-ptt-system
     Type: String
+
+  DNS:
+    Description: Set to 'true' if you want to manage DNS via Route53
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - true
+      - false
+
+  DNSZoneID:
+    Description: "Route53 Zone ID (Optional.  Required if DNS_Enable is set to 'true'.)"
+    Type: String
+    Default: ""
+
+  DNSDomain:
+    Description: "Domain for DNS Records (Optional  Required if DNS_Enable is set to 'true'.)"
+    Type: String
+    Default: ""
 
 Resources:
 #  DescribeImagesRole:
@@ -217,6 +236,76 @@ Resources:
         - Key: Name
           Value: !Sub ${AWS::StackName} Orion PTT System Default Security Group
 
+  AlnilamRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      TTL: 300
+      Name: !Sub alnilam.${DNSDomain}
+      Type: A
+      HostedZoneId: !Ref DNSZoneID
+      ResourceRecords:
+        - !GetAtt KubernetesInstance.PublicIp
+
+  AtlasRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      TTL: 300
+      Name: !Sub atlas.${DNSDomain}
+      Type: A
+      HostedZoneId: !Ref DNSZoneID
+      ResourceRecords:
+        - !GetAtt KubernetesInstance.PublicIp
+
+  IcarusRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      TTL: 300
+      Name: !Sub icarus.${DNSDomain}
+      Type: A
+      HostedZoneId: !Ref DNSZoneID
+      ResourceRecords:
+        - !GetAtt KubernetesInstance.PublicIp
+
+  ObserverRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      TTL: 300
+      Name: !Sub observer.${DNSDomain}
+      Type: A
+      HostedZoneId: !Ref DNSZoneID
+      ResourceRecords:
+        - !GetAtt KubernetesInstance.PublicIp
+
+  RigelRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      TTL: 300
+      Name: !Sub rigel.${DNSDomain}
+      Type: A
+      HostedZoneId: !Ref DNSZoneID
+      ResourceRecords:
+        - !GetAtt KubernetesInstance.PublicIp
+
+  RigelProxyRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      TTL: 300
+      Name: !Sub rigel.${DNSDomain}
+      Type: A
+      HostedZoneId: !Ref DNSZoneID
+      ResourceRecords:
+        - !GetAtt KubernetesInstance.PublicIp
+
+  VaultRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      TTL: 300
+      Name: !Sub vault.${DNSDomain}
+      Type: A
+      HostedZoneId: !Ref DNSZoneID
+      ResourceRecords:
+        - !GetAtt KubernetesInstance.PublicIp
+
 Outputs:
   K8sNodeInternalIpAddress:
     Description: Internal IP Address of Kubernetes Instance
@@ -229,3 +318,31 @@ Outputs:
     Value: !GetAtt KubernetesInstance.PublicIp
     Export:
       Name: !Sub ${AWS::StackName}-K8sNodePublicIpAddress
+
+  AlnilamFQDN:
+    Description: FQDN of Alnilam Service
+    Value: !Ref AlnilamRecord
+
+  AtlasFQDN:
+    Description: FQDN of Alnilam Service
+    Value: !Ref AtlasRecord
+
+  IcarusFQDN:
+    Description: FQDN of Icarus Service
+    Value: !Ref IcarusRecord
+
+  ObserverFQDN:
+    Description: FQDN of Observer Service
+    Value: !Ref ObserverRecord
+
+  RigelFQDN:
+    Description: FQDN of Rigel Service
+    Value: !Ref RigelRecord
+
+  RigelProxyFQDN:
+    Description: FQDN of Rigel Proxy Service
+    Value: !Ref RigelProxyRecord
+
+  VaultFQDN:
+    Description: FQDN of VaultService
+    Value: !Ref VaultRecord
