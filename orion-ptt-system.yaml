@@ -3,24 +3,29 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Cloudformation script to create the orion-ptt-system in AWS'
 
 Conditions:
-  ConfigureRoute53: !Equals [!Ref DNS, "true"]
+  Route53: !Equals [!Ref CreateDNS, "true"]
+  EnableVPC: !Equals [!Ref CreateVPC, "true"]
 #  AutodetectAmiId: !Equals [ !Ref InstanceAmiId, "autodetect" ]
 
 Parameters:
-  VpcID:
-    Description: ID of the VPC where the EC2 instances are to be launched.
-    Type: AWS::EC2::VPC::Id
+  ExistingVpcID:
+    Description: ID of the VPC where the EC2 instances are to be launched. (Needed unless you enable VPC creation.)
+    #Type: AWS::EC2::VPC::Id
+    Type: String
+    Default: ""
 
-  PublicSubnet:
-    Description: A public subnet where EC2 instances can be reached by the Internet.
-    Type: AWS::EC2::Subnet::Id
+  ExistingPublicSubnet:
+    Description: A public subnet where EC2 instances can be reached by the Internet. (Needed unless you enable VPC creation.)
+    #Type: AWS::EC2::Subnet::Id
+    Type: String
+    Default: ""
 
   KeyName:
     Description: The EC2 Key Pair which will be used with all the EC2 instances launched as part of this cloudformation script.
     Type: AWS::EC2::KeyPair::KeyName
 
-  InstanceAmiId:
-    Description: AMI ID for your EC2 Instances.  Ubuntu Server 18.04 LTS is recommended.  If you don't enter an AMI ID, we'll created a Lambda to find the latest Ubuntu 18.04 image and use that for your stack.
+  AmiId:
+    Description: AMI ID for your EC2 Instances.  Ubuntu Server 18.04 LTS is recommended.
     Type: AWS::EC2::Image::Id
 #    Type: String
 #    Default: "autodetect"
@@ -35,28 +40,52 @@ Parameters:
     Default: 50
     Type: String
 
-  KubernetesNodeName:
-    Description: Name for kubernetes node
+  InstanceName:
+    Description: Name for EC2 Node
     Default: orion-ptt-system
     Type: String
 
-  DNS:
+  CreateDNS:
     Description: Set to 'true' if you want to manage DNS via Route53
     Type: String
-    Default: "false"
+    Default: false
     AllowedValues:
       - true
       - false
 
-  DNSZoneID:
-    Description: "Route53 Zone ID (Optional.  Required if DNS_Enable is set to 'true'.)"
+  CreateDNSZoneID:
+    Description: "Route53 Zone ID (Optional.  Required if creating DNS Records.)"
     Type: String
     Default: ""
 
-  DNSDomain:
-    Description: "Domain for DNS Records (Optional  Required if DNS_Enable is set to 'true'.)"
+  CreateDNSDomain:
+    Description: "Domain for DNS Records (Optional  Required if creating DNS Records.)"
     Type: String
     Default: ""
+
+  CreateVPC:
+    Description: "Create a VPC."
+    Type: String
+    Default: false
+    AllowedValues:
+      - true
+      - false
+
+  CreateVPCName:
+    Description: "Name of your new VPC. (Only needed if creating a VPC.)"
+    Type: String
+    Default: Orion PTT System
+
+  CreateVPCAvailabilityZone:
+    Description: "Availability Zone for your VPC network.  (Only needed if creating a VPC.)"
+    Type: String
+    Default: us-east-1a
+
+  CreateVPCSubnetCidrBlock:
+    Description: "Network address block for your VPC Subnet.  (Only needed if creating a VPC.)"
+    Type: String
+    Default: 10.44.0.0/24
+
 
 Resources:
 #  DescribeImagesRole:
@@ -128,11 +157,11 @@ Resources:
 #      Name: ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-*
 #      Architecture: x86_64
 
-  KubernetesInstance:
+  EC2Instance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: !Ref InstanceType
-      ImageId: !Ref InstanceAmiId
+      ImageId: !Ref AmiId
 #      ImageId: !If [ AutodetectAmiId, !Ref InstanceAmi, !Ref InstanceAmiId ]
       KeyName: !Ref KeyName
 
@@ -152,7 +181,7 @@ Resources:
       NetworkInterfaces:
         - AssociatePublicIpAddress: "True"
           DeleteOnTermination: "True"
-          SubnetId: !Ref PublicSubnet
+          SubnetId: !If [EnableVPC, !Ref Subnet, !Ref ExistingPublicSubnet]
           DeviceIndex: 0
           GroupSet:
             - Ref: InstanceSecurityGroup
@@ -162,7 +191,7 @@ Resources:
           Value: Kubernetes Node
 
         - Key: Name
-          Value: !Sub ${AWS::StackName}-${KubernetesNodeName}
+          Value: !Sub ${AWS::StackName}-${InstanceName}
 
   KubernetesNodeRole:
     Type: "AWS::IAM::Role"
@@ -204,7 +233,7 @@ Resources:
     Properties:
       GroupDescription: Security group for orion-ptt-system
       GroupName: !Sub ${AWS::StackName}-orion-default-security-group
-      VpcId: !Ref VpcID
+      VpcId: !If [EnableVPC, !Ref OrionVPC, !Ref ExistingVpcID]
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
@@ -238,84 +267,182 @@ Resources:
 
   AlnilamRecord:
     Type: AWS::Route53::RecordSet
+    Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub alnilam.${DNSDomain}
+      Name: !Sub alnilam.${CreateDNSDomain}
       Type: A
-      HostedZoneId: !Ref DNSZoneID
+      HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
-        - !GetAtt KubernetesInstance.PublicIp
+        - !GetAtt EC2Instance.PublicIp
 
   AtlasRecord:
     Type: AWS::Route53::RecordSet
+    Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub atlas.${DNSDomain}
+      Name: !Sub atlas.${CreateDNSDomain}
       Type: A
-      HostedZoneId: !Ref DNSZoneID
+      HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
-        - !GetAtt KubernetesInstance.PublicIp
+        - !GetAtt EC2Instance.PublicIp
 
   IcarusRecord:
     Type: AWS::Route53::RecordSet
+    Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub icarus.${DNSDomain}
+      Name: !Sub icarus.${CreateDNSDomain}
       Type: A
-      HostedZoneId: !Ref DNSZoneID
+      HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
-        - !GetAtt KubernetesInstance.PublicIp
+        - !GetAtt EC2Instance.PublicIp
 
   ObserverRecord:
     Type: AWS::Route53::RecordSet
+    Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub observer.${DNSDomain}
+      Name: !Sub observer.${CreateDNSDomain}
       Type: A
-      HostedZoneId: !Ref DNSZoneID
+      HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
-        - !GetAtt KubernetesInstance.PublicIp
+        - !GetAtt EC2Instance.PublicIp
 
   RigelRecord:
     Type: AWS::Route53::RecordSet
+    Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub rigel.${DNSDomain}
+      Name: !Sub rigel.${CreateDNSDomain}
       Type: A
-      HostedZoneId: !Ref DNSZoneID
+      HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
-        - !GetAtt KubernetesInstance.PublicIp
+        - !GetAtt EC2Instance.PublicIp
 
   RigelProxyRecord:
     Type: AWS::Route53::RecordSet
+    Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub rigel.${DNSDomain}
+      Name: !Sub rigel.${CreateDNSDomain}
       Type: A
-      HostedZoneId: !Ref DNSZoneID
+      HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
-        - !GetAtt KubernetesInstance.PublicIp
+        - !GetAtt EC2Instance.PublicIp
 
   VaultRecord:
     Type: AWS::Route53::RecordSet
+    Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub vault.${DNSDomain}
+      Name: !Sub vault.${CreateDNSDomain}
       Type: A
-      HostedZoneId: !Ref DNSZoneID
+      HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
-        - !GetAtt KubernetesInstance.PublicIp
+        - !GetAtt EC2Instance.PublicIp
+
+  # The VPC
+  OrionVPC:
+    Type: AWS::EC2::VPC
+    Condition: EnableVPC
+    Properties:
+      CidrBlock: 10.44.0.0/21
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Ref CreateVPCName
+
+  # Internet Gateway
+  Gateway:
+    Type: AWS::EC2::InternetGateway
+    Condition: EnableVPC
+
+  # Attach the Internet Gateway to the VPC
+  GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Condition: EnableVPC
+    Properties:
+      InternetGatewayId:
+        Ref: Gateway
+      VpcId:
+        Ref: OrionVPC
+
+  # Route Table
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Condition: EnableVPC
+    Properties:
+      VpcId:
+        Ref: OrionVPC
+
+  # Route
+  Route:
+    Type: AWS::EC2::Route
+    Condition: EnableVPC
+    Properties:
+      RouteTableId:
+        Ref: RouteTable
+      GatewayId:
+        Ref: Gateway
+      DestinationCidrBlock: "0.0.0.0/0"
+
+  # Subnet
+  Subnet:
+    Type: AWS::EC2::Subnet
+    Condition: EnableVPC
+    Properties:
+      AvailabilityZone:
+        Ref: CreateVPCAvailabilityZone
+      CidrBlock:
+        Ref: CreateVPCSubnetCidrBlock
+      VpcId:
+        Ref: OrionVPC
+      MapPublicIpOnLaunch: true
+
+  SubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: EnableVPC
+    Properties:
+      RouteTableId:
+        Ref: RouteTable
+      SubnetId:
+        Ref: Subnet
+
+#  ElasticIP:
+#    Type: AWS::EC2::EIP
+#    Condition: EnableVPC
+#    Properties:
+#      Domain: vpc
+#
+#
+
+# Elastic IP's
+#  resource "aws_eip" "nat1" {
+#    vpc = true
+#  }
+#
+#  resource "aws_eip" "nat2" {
+#    vpc = true
+#  }
+
+# NAT Gateways
+#  resource "aws_nat_gateway" "public1" {
+#    allocation_id = aws_eip.nat1.id
+#    subnet_id = aws_subnet.public1.id
+#  }
 
 Outputs:
   K8sNodeInternalIpAddress:
     Description: Internal IP Address of Kubernetes Instance
-    Value: !GetAtt KubernetesInstance.PrivateIp
+    Value: !GetAtt EC2Instance.PrivateIp
     Export:
       Name: !Sub ${AWS::StackName}-K8sNodePrivateIpAddress
 
   K8sNodeExternalIpAddress:
     Description: External IP Address of Kubernetes Instance
-    Value: !GetAtt KubernetesInstance.PublicIp
+    Value: !GetAtt EC2Instance.PublicIp
     Export:
       Name: !Sub ${AWS::StackName}-K8sNodePublicIpAddress
 
