@@ -76,6 +76,11 @@ Parameters:
     Type: String
     Default: Orion PTT System
 
+  CreateVPCNetwork:
+    Description: "Network CIDR block for the VPC's network."
+    Type: String
+    Default: 10.44.0.0/21
+
   CreateVPCAvailabilityZone:
     Description: "Availability Zone for your VPC network.  (Only needed if creating a VPC.)"
     Type: String
@@ -347,7 +352,7 @@ Resources:
     Type: AWS::EC2::VPC
     Condition: EnableVPC
     Properties:
-      CidrBlock: 10.44.0.0/21
+      CidrBlock: !Ref CreateVPCNetwork
       EnableDnsHostnames: true
       EnableDnsSupport: true
       Tags:
