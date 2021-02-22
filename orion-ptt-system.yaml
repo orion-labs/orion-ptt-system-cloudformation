@@ -465,7 +465,7 @@ Outputs:
     Description: FQDN of Data Service
     Value: !Ref IcarusRecord
 
-  APIService:
+  ApiService:
     Description: FQDN of API Service
     Value: !Ref ObserverRecord
 
