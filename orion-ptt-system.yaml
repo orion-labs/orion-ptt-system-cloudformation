@@ -63,6 +63,14 @@ Parameters:
     Type: String
     Default: ""
 
+  CreateDNSSuffix:
+    Description: "Append Stack Name to DNS records.  (Useful if creating multiple stacks to prevent DNS clashes.)"
+    Type: String
+    Default: false
+    AllowedValues:
+      - true
+      - false
+
   CreateVPC:
     Description: "Create a VPC."
     Type: String
@@ -275,7 +283,7 @@ Resources:
     Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub alnilam.${CreateDNSDomain}
+      Name: !Sub alnilam-${AWS::StackName}.${CreateDNSDomain}
       Type: A
       HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
@@ -286,7 +294,7 @@ Resources:
     Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub atlas.${CreateDNSDomain}
+      Name: !Sub atlas-${AWS::StackName}.${CreateDNSDomain}
       Type: A
       HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
@@ -297,7 +305,7 @@ Resources:
     Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub icarus.${CreateDNSDomain}
+      Name: !Sub icarus-${AWS::StackName}.${CreateDNSDomain}
       Type: A
       HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
@@ -308,7 +316,7 @@ Resources:
     Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub observer.${CreateDNSDomain}
+      Name: !Sub observer-${AWS::StackName}.${CreateDNSDomain}
       Type: A
       HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
@@ -319,7 +327,7 @@ Resources:
     Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub rigel.${CreateDNSDomain}
+      Name: !Sub rigel-${AWS::StackName}.${CreateDNSDomain}
       Type: A
       HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
@@ -330,7 +338,7 @@ Resources:
     Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub rigel.${CreateDNSDomain}
+      Name: !Sub rigel-${AWS::StackName}.${CreateDNSDomain}
       Type: A
       HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
@@ -341,7 +349,7 @@ Resources:
     Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub vault.${CreateDNSDomain}
+      Name: !Sub vault-${AWS::StackName}.${CreateDNSDomain}
       Type: A
       HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
