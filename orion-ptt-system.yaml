@@ -1,6 +1,6 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Cloudformation script to create the orion-ptt-system in AWS'
+Description: 'The Orion PTT System in AWS'
 
 Conditions:
   Route53: !Equals [!Ref CreateDNS, "true"]
