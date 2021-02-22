@@ -450,8 +450,6 @@ Outputs:
   Address:
     Description: IP Address of EC2 Node
     Value: !GetAtt EC2Instance.PublicIp
-    Export:
-      Name: !Sub ${AWS::StackName}-K8sNodePublicIpAddress
 
   StreamService:
     Description: FQDN of Stream Service
