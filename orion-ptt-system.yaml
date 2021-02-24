@@ -455,7 +455,7 @@ Outputs:
     Description: FQDN of Stream Service
     Value: !Ref AlnilamRecord
 
-  FrontendService:
+  AdminConsole:
     Description: FQDN of Frontend Service
     Value: !Ref AtlasRecord
 
