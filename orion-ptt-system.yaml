@@ -278,78 +278,78 @@ Resources:
         - Key: Name
           Value: !Sub ${AWS::StackName} Orion PTT System Default Security Group
 
-  AlnilamRecord:
+  EventStreamRecord:
     Type: AWS::Route53::RecordSet
     Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub alnilam-${AWS::StackName}.${CreateDNSDomain}
+      Name: !Sub eventstream-${AWS::StackName}.${CreateDNSDomain}
       Type: A
       HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
         - !GetAtt EC2Instance.PublicIp
 
-  AtlasRecord:
+  LoginRecord:
     Type: AWS::Route53::RecordSet
     Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub atlas-${AWS::StackName}.${CreateDNSDomain}
+      Name: !Sub login-${AWS::StackName}.${CreateDNSDomain}
       Type: A
       HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
         - !GetAtt EC2Instance.PublicIp
 
-  IcarusRecord:
+  DatastoreRecord:
     Type: AWS::Route53::RecordSet
     Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub icarus-${AWS::StackName}.${CreateDNSDomain}
+      Name: !Sub datastore-${AWS::StackName}.${CreateDNSDomain}
       Type: A
       HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
         - !GetAtt EC2Instance.PublicIp
 
-  ObserverRecord:
+  APIRecord:
     Type: AWS::Route53::RecordSet
     Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub observer-${AWS::StackName}.${CreateDNSDomain}
+      Name: !Sub api-${AWS::StackName}.${CreateDNSDomain}
       Type: A
       HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
         - !GetAtt EC2Instance.PublicIp
 
-  RigelRecord:
+  MediaRecord:
     Type: AWS::Route53::RecordSet
     Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub rigel-${AWS::StackName}.${CreateDNSDomain}
+      Name: !Sub media-${AWS::StackName}.${CreateDNSDomain}
       Type: A
       HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
         - !GetAtt EC2Instance.PublicIp
 
-  RigelProxyRecord:
+  CDNRecord:
     Type: AWS::Route53::RecordSet
     Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub rigel-${AWS::StackName}.${CreateDNSDomain}
+      Name: !Sub media-${AWS::StackName}.${CreateDNSDomain}
       Type: A
       HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
         - !GetAtt EC2Instance.PublicIp
 
-  VaultRecord:
+  CARecord:
     Type: AWS::Route53::RecordSet
     Condition: Route53
     Properties:
       TTL: 300
-      Name: !Sub vault-${AWS::StackName}.${CreateDNSDomain}
+      Name: !Sub ca-${AWS::StackName}.${CreateDNSDomain}
       Type: A
       HostedZoneId: !Ref CreateDNSZoneID
       ResourceRecords:
@@ -451,30 +451,30 @@ Outputs:
     Description: IP Address of EC2 Node
     Value: !GetAtt EC2Instance.PublicIp
 
-  StreamService:
+  EventStream:
     Description: FQDN of Stream Service
-    Value: !Ref AlnilamRecord
+    Value: !Ref EventStreamRecord
 
-  AdminConsole:
+  Login:
     Description: FQDN of Frontend Service
-    Value: !Ref AtlasRecord
+    Value: !Ref LoginRecord
 
-  DataService:
+  Datastore:
     Description: FQDN of Data Service
-    Value: !Ref IcarusRecord
+    Value: !Ref DatastoreRecord
 
-  ApiService:
+  Api:
     Description: FQDN of API Service
-    Value: !Ref ObserverRecord
+    Value: !Ref APIRecord
 
-  TransportService:
+  Media:
     Description: FQDN of Transport Service
-    Value: !Ref RigelRecord
+    Value: !Ref MediaRecord
 
-  TransportProxy:
+  CDN:
     Description: FQDN of Transport Proxy
-    Value: !Ref RigelProxyRecord
+    Value: !Ref CDNRecord
 
-  CertificateAuthority:
+  CA:
     Description: FQDN of Certificate Authority
-    Value: !Ref VaultRecord
+    Value: !Ref CARecord
