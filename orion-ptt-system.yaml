@@ -472,7 +472,7 @@ Outputs:
     Value: !Ref MediaRecord
 
   CDN:
-    Description: FQDN of CDN
+    Description: FQDN of Content Delivery Network (Defaults to Media Service)
     Value: !Ref CDNRecord
 
   CA:
