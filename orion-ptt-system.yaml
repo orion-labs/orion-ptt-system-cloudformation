@@ -452,15 +452,15 @@ Outputs:
     Value: !GetAtt EC2Instance.PublicIp
 
   EventStream:
-    Description: FQDN of Stream Service
+    Description: FQDN of Event Stream Service
     Value: !Ref EventStreamRecord
 
   Login:
-    Description: FQDN of Frontend Service
+    Description: FQDN of Login Console
     Value: !Ref LoginRecord
 
   Datastore:
-    Description: FQDN of Data Service
+    Description: FQDN of Datastore Service
     Value: !Ref DatastoreRecord
 
   Api:
@@ -468,11 +468,11 @@ Outputs:
     Value: !Ref APIRecord
 
   Media:
-    Description: FQDN of Transport Service
+    Description: FQDN of Media Service
     Value: !Ref MediaRecord
 
   CDN:
-    Description: FQDN of Transport Proxy
+    Description: FQDN of CDN
     Value: !Ref CDNRecord
 
   CA:
