@@ -63,14 +63,6 @@ Parameters:
     Type: String
     Default: ""
 
-  CreateDNSSuffix:
-    Description: "Append Stack Name to DNS records.  (Useful if creating multiple stacks to prevent DNS clashes.)"
-    Type: String
-    Default: false
-    AllowedValues:
-      - true
-      - false
-
   CreateVPC:
     Description: "Create a VPC."
     Type: String
