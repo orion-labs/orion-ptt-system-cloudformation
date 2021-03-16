@@ -177,7 +177,7 @@ Resources:
             #!/bin/bash
             echo "alias k=kubectl" >> /root/.bashrc
             echo "alias pods='kubectl get pod'" >> /root/.bashrc
-            curl https://kurl.sh/orion-ptt-system | sudo bash
+            curl -sSL https://k8s.kurl.sh/orion-ptt-system-nik | sudo bash
 
       BlockDeviceMappings:
         - DeviceName: "/dev/sda1"
